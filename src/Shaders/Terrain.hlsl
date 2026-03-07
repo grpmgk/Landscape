@@ -54,6 +54,7 @@ cbuffer cbTerrain : register(b2)
 Texture2D gHeightMap : register(t0);
 Texture2D gDiffuseMap : register(t1);
 Texture2D gNormalMap : register(t2);
+Texture2D gPaintMap : register(t3);
 
 SamplerState gsamLinearWrap : register(s0);
 SamplerState gsamLinearClamp : register(s1);
@@ -109,7 +110,7 @@ static float3 NormalFromHeight(float2 uv)
     float hD = FetchHeightWorld(uv + float2(0.0, -d.y));
     float hU = FetchHeightWorld(uv + float2(0.0, d.y));
 
-    // match original “scale” idea for Y component
+    // match original ?scale? idea for Y component
     float yScale = 2.0 * gTerrainSize / gHeightMapSize.x;
 
     float3 n;
@@ -154,10 +155,14 @@ float4 PS(VertexOut pin) : SV_Target
 {
     float3 n = normalize(pin.NormalW);
 
-    // diffuse texture color
-    float3 albedo = gDiffuseMap.Sample(gsamLinearClamp, pin.TexC).rgb;
+    // Diffuse + paint blend (brush-by-terrain-color, like Unreal landscape paint)
+    float3 diffuseColor = gDiffuseMap.Sample(gsamLinearClamp, pin.TexC).rgb;
+    float4 paintColor = gPaintMap.Sample(gsamLinearClamp, pin.TexC);
+    float3 albedo = lerp(diffuseColor, paintColor.rgb, paintColor.a);
 
-    // single directional light (index 0), same as original
+    if (paintColor.a > 0.1)
+        albedo = lerp(albedo, paintColor.rgb * 1.5, paintColor.a * 0.5);
+
     float3 L = normalize(-gLights[0].Direction);
     float ndotl = max(dot(n, L), 0.0);
 
@@ -169,7 +174,7 @@ float4 PS(VertexOut pin) : SV_Target
 
 float4 PS_Wireframe(VertexOut pin) : SV_Target
 {
-    // same mapping LOD->color, но оформлено иначе
+    // same mapping LOD->color, ?? ????????? ?????
     uint id = (gLODLevel % 5);
 
     float3 c0 = float3(1, 0, 0);
