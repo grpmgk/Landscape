@@ -75,9 +75,9 @@ public:
     // Day/Night cycle
     struct DayCycleState
     {
-        float TimeOfDay = 0.5f;          // 0.0 = midnight, 0.5 = noon, 1.0 = midnight
-        float CycleSpeed = 0.02f;         // Full day cycle speed (lower = slower)
-        bool IsEnabled = false;
+        float TimeOfDay = 0.5f;          // 0.0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset
+        float CycleSpeed = 0.02f;        // Full day cycle speed (lower = slower)
+        bool IsEnabled = true;           // On by default — sun moves in a circle (rise -> noon -> set -> night)
         
         // Computed values
         float SunElevation = 0.0f;        // Current sun elevation angle

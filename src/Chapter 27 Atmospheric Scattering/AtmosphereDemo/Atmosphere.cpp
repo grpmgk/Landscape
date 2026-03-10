@@ -141,20 +141,20 @@ void Atmosphere::UpdateDayCycle(float deltaTime)
     if (!mDayCycle.IsEnabled)
         return;
 
-    // Update time of day (0.0 to 1.0, wrapping)
+    // Update time of day (0.0 to 1.0, one full circle: midnight -> sunrise -> noon -> sunset -> night -> midnight)
     mDayCycle.TimeOfDay += mDayCycle.CycleSpeed * deltaTime;
     if (mDayCycle.TimeOfDay >= 1.0f)
         mDayCycle.TimeOfDay -= 1.0f;
 
-    // Calculate sun position
-    // TimeOfDay: 0.0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset
-    float sunAngle = mDayCycle.TimeOfDay * DirectX::XM_2PI;
-    
-    // Sun elevation: -90° at midnight, +90° at noon
-    mDayCycle.SunElevation = sinf(sunAngle) * DirectX::XM_PIDIV2;
-    
-    // Sun azimuth rotates through the day
-    mDayCycle.SunAzimuth = cosf(sunAngle) * DirectX::XM_PI;
+    // Sun moves in a circle like in real life: rises in east, crosses sky, sets in west, goes below horizon (night), returns
+    // TimeOfDay: 0.0 = midnight (below), 0.25 = sunrise (east), 0.5 = noon (zenith), 0.75 = sunset (west), 1.0 = midnight
+    const float t = mDayCycle.TimeOfDay * DirectX::XM_2PI;  // 0..2*PI over the day
+
+    // Elevation: -90° at midnight (below horizon), 0° at sunrise/sunset, +90° at noon
+    mDayCycle.SunElevation = DirectX::XM_PIDIV2 * sinf(t - DirectX::XM_PIDIV2);
+
+    // Azimuth: east at sunrise (0.25), south at noon (0.5), west at sunset (0.75)
+    mDayCycle.SunAzimuth = DirectX::XM_PIDIV2 - (mDayCycle.TimeOfDay - 0.25f) * DirectX::XM_2PI;
 
     // Calculate sun height for color transitions
     float sunHeight = sinf(mDayCycle.SunElevation);
