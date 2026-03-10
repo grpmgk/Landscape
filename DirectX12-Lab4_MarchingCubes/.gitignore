@@ -1,0 +1,14 @@
+# Visual Studio
+.vs/
+x64/
+*.user
+*.suo
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.VC.opendb
+
+# Build
+[Dd]ebug/
+[Rr]elease/
+[Bb]uild/
