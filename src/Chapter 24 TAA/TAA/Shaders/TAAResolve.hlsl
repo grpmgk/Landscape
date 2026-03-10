@@ -13,7 +13,7 @@ cbuffer cbTAA : register(b0)
     float2 gScreenSize;
     float gBlendFactor;
     float gMotionScale;
-    float gMotionDebugEnabled;  // 1.0 = show red on moving pixels
+    float gMotionDebugEnabled;  // 1.0 = show motion: R=(MV.x+1)/2, B=(MV.y+1)/2 (scaled)
     float gPadding;
 };
 
@@ -143,17 +143,15 @@ float4 PS(VertexOut pin) : SV_Target
     // Final blend
     float3 finalColor = lerp(historyRGB, currentRGB, blend);
     
-    // Motion debug visualization - show red where there is motion
+    // Motion debug: R = (MV.x*scale + 1)/2, B = (MV.y*scale + 1)/2 — scale so small values become visible
     if (gMotionDebugEnabled > 0.5f)
     {
-        float2 rawVelocity = gMotionVectors.Sample(gsamPointClamp, uv).rg;
-        float velocityMag = length(rawVelocity);
-        
-        if (velocityMag > 0.00001f)
-        {
-            float intensity = min(velocityMag * 500.0f, 1.0f);
-            finalColor = lerp(finalColor, float3(1.0f, 0.0f, 0.0f), max(intensity, 0.5f));
-        }
+        float2 mv = gMotionVectors.Sample(gsamPointClamp, uv).rg;
+        const float motionVisScale = 15.0;  // MV in UV are small (~±0.1); scale to see red/blue
+        float2 mvScaled = mv * motionVisScale;
+        float r = saturate((mvScaled.x + 1.0) * 0.5);
+        float b = saturate((mvScaled.y + 1.0) * 0.5);
+        finalColor = float3(r, 0.0, b);
     }
     
     return float4(finalColor, 1.0f);

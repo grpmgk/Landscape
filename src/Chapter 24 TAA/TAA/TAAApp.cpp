@@ -159,7 +159,7 @@ private:
     bool mTAAEnabled = true;
     bool mFSR3Enabled = false;
     bool mFSR3NeedsReset = true;
-    bool mMotionDebugEnabled = false;  // Debug: show motion vectors in red
+    bool mMotionDebugEnabled = false;  // Debug: motion vectors R=(MV.x+1)/2, G=(MV.y+1)/2
     
     UINT mFSR3OutputUavIndex = 0;
     
@@ -914,7 +914,7 @@ void TAAApp::OnKeyboardInput(const GameTimer& gt)
         if(!mKeyPressed)
         {
             mMotionDebugEnabled = !mMotionDebugEnabled;
-            printf("Motion Debug (red = moving pixels): %s\n", mMotionDebugEnabled ? "ON" : "OFF");
+            printf("Motion vectors: %s | R=(MV.x+1)/2, B=(MV.y+1)/2. Move camera (WASD) or objects to see red/blue.\n", mMotionDebugEnabled ? "ON" : "OFF");
             mKeyPressed = true;
         }
     }
