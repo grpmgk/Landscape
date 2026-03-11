@@ -1,0 +1,12 @@
+После первой успешной сборки:
+
+1. Скачай архив с https://github.com/microsoft/DirectXShaderCompiler/releases
+   (Assets -> архив для Windows x64, например dxc_..._x64.zip)
+
+2. Из архива скопируй в папку с NaniteLike.exe (bin\Debug или bin\Release):
+   - dxcompiler.dll
+   - dxil.dll
+
+3. Запусти NaniteLike.exe снова.
+
+Без этих двух DLL приложение выдаст ошибку "dxcompiler.dll was not found".
