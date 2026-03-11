@@ -1,0 +1,12 @@
+# Visual Studio
+.vs/
+x64/
+[Dd]ebug/
+[Rr]elease/
+[Bb]uild/
+*.user
+*.suo
+*.sdf
+*.opendb
+*.VC.db
+*.VC.opendb
