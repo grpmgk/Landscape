@@ -1,0 +1,15 @@
+# Visual Studio
+**/.vs/
+**/x64/
+**/[Dd]ebug/
+**/[Rr]elease/
+**/[Bb]uild/
+**/bin/
+*.user
+*.suo
+*.sdf
+*.opendb
+*.VC.db
+*.VC.opendb
+# NuGet binary libs
+**/packages/**/native/
