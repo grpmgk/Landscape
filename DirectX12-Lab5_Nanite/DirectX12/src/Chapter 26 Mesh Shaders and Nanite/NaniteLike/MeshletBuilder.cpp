@@ -3,6 +3,7 @@
 //***************************************************************************************
 
 #include "MeshletBuilder.h"
+#include "DirectStorageLoader.h"
 #include <unordered_map>
 #include <fstream>
 #include <sstream>
@@ -270,6 +271,162 @@ bool MeshletBuilder::LoadOBJ(const std::wstring& filename, MeshletMesh& outMesh)
 
     return BuildMeshlets(positions, normals, texCoords, tangents, indices, outMesh);
 }
+
+bool MeshletBuilder::LoadOBJWithDirectStorage(
+    const std::wstring& filename,
+    MeshletMesh& outMesh,
+    DirectStorageLoader* storageLoader)
+{
+    if (!storageLoader)
+    {
+        OutputDebugStringA("DirectStorage loader is null, falling back to standard loading\n");
+        return LoadOBJ(filename, outMesh);
+    }
+
+    // Load file data using DirectStorage
+    std::vector<uint8_t> fileData;
+    OutputDebugStringA("Loading OBJ file via DirectStorage...\n");
+    
+    if (!storageLoader->LoadFileToMemory(filename, fileData))
+    {
+        OutputDebugStringA("DirectStorage failed to load file, falling back to standard loading\n");
+        return LoadOBJ(filename, outMesh);
+    }
+
+    OutputDebugStringA("DirectStorage: File loaded successfully, parsing OBJ...\n");
+
+    // Parse OBJ from memory buffer
+    std::string fileContent(reinterpret_cast<char*>(fileData.data()), fileData.size());
+    std::istringstream fileStream(fileContent);
+
+    std::vector<XMFLOAT3> tempPositions;
+    std::vector<XMFLOAT3> tempNormals;
+    std::vector<XMFLOAT2> tempTexCoords;
+
+    std::vector<XMFLOAT3> positions;
+    std::vector<XMFLOAT3> normals;
+    std::vector<XMFLOAT2> texCoords;
+    std::vector<uint32_t> indices;
+
+    std::unordered_map<std::string, uint32_t> vertexCache;
+
+    std::string line;
+    while (std::getline(fileStream, line))
+    {
+        std::istringstream iss(line);
+        std::string prefix;
+        iss >> prefix;
+
+        if (prefix == "v")
+        {
+            XMFLOAT3 pos;
+            iss >> pos.x >> pos.y >> pos.z;
+            tempPositions.push_back(pos);
+        }
+        else if (prefix == "vn")
+        {
+            XMFLOAT3 norm;
+            iss >> norm.x >> norm.y >> norm.z;
+            tempNormals.push_back(norm);
+        }
+        else if (prefix == "vt")
+        {
+            XMFLOAT2 tex;
+            iss >> tex.x >> tex.y;
+            tex.y = 1.0f - tex.y;
+            tempTexCoords.push_back(tex);
+        }
+        else if (prefix == "f")
+        {
+            std::string vertex;
+            std::vector<uint32_t> faceIndices;
+
+            while (iss >> vertex)
+            {
+                auto it = vertexCache.find(vertex);
+                if (it != vertexCache.end())
+                {
+                    faceIndices.push_back(it->second);
+                    continue;
+                }
+
+                uint32_t posIdx = 0, texIdx = 0, normIdx = 0;
+                
+                if (sscanf_s(vertex.c_str(), "%u/%u/%u", &posIdx, &texIdx, &normIdx) == 3) {}
+                else if (sscanf_s(vertex.c_str(), "%u//%u", &posIdx, &normIdx) == 2) { texIdx = 0; }
+                else if (sscanf_s(vertex.c_str(), "%u/%u", &posIdx, &texIdx) == 2) { normIdx = 0; }
+                else { sscanf_s(vertex.c_str(), "%u", &posIdx); texIdx = 0; normIdx = 0; }
+
+                posIdx--;
+                if (texIdx > 0) texIdx--;
+                if (normIdx > 0) normIdx--;
+
+                uint32_t newIndex = static_cast<uint32_t>(positions.size());
+                
+                positions.push_back(tempPositions[posIdx]);
+                normals.push_back(normIdx < tempNormals.size() ? tempNormals[normIdx] : XMFLOAT3(0, 1, 0));
+                texCoords.push_back(texIdx < tempTexCoords.size() ? tempTexCoords[texIdx] : XMFLOAT2(0, 0));
+
+                vertexCache[vertex] = newIndex;
+                faceIndices.push_back(newIndex);
+            }
+
+            for (size_t i = 1; i + 1 < faceIndices.size(); ++i)
+            {
+                indices.push_back(faceIndices[0]);
+                indices.push_back(faceIndices[i]);
+                indices.push_back(faceIndices[i + 1]);
+            }
+        }
+    }
+
+    // If no texture coordinates were loaded, generate them using spherical mapping
+    if (tempTexCoords.empty() && !positions.empty())
+    {
+        OutputDebugStringA("No UV coordinates in OBJ, generating spherical mapping...\n");
+        
+        // Find bounding sphere center
+        XMVECTOR minPt = XMVectorSet(FLT_MAX, FLT_MAX, FLT_MAX, 0);
+        XMVECTOR maxPt = XMVectorSet(-FLT_MAX, -FLT_MAX, -FLT_MAX, 0);
+        for (const auto& p : positions)
+        {
+            XMVECTOR pos = XMLoadFloat3(&p);
+            minPt = XMVectorMin(minPt, pos);
+            maxPt = XMVectorMax(maxPt, pos);
+        }
+        XMVECTOR center = (minPt + maxPt) * 0.5f;
+        
+        // Generate spherical UV coordinates
+        texCoords.clear();
+        texCoords.reserve(positions.size());
+        for (const auto& p : positions)
+        {
+            XMVECTOR pos = XMLoadFloat3(&p);
+            XMVECTOR dir = XMVector3Normalize(pos - center);
+            
+            XMFLOAT3 d;
+            XMStoreFloat3(&d, dir);
+            
+            // Spherical mapping
+            float u = 0.5f + atan2f(d.z, d.x) / (2.0f * XM_PI);
+            float v = 0.5f - asinf(d.y) / XM_PI;
+            
+            texCoords.push_back(XMFLOAT2(u, v));
+        }
+    }
+
+    std::vector<XMFLOAT3> tangents(positions.size(), XMFLOAT3(1, 0, 0));
+    outMesh.Name = "OBJMesh_DirectStorage";
+    
+    char buf[256];
+    sprintf_s(buf, "DirectStorage: Loaded OBJ: %zu vertices, %zu triangles, UVs: %s\n", 
+        positions.size(), indices.size() / 3, 
+        tempTexCoords.empty() ? "generated" : "from file");
+    OutputDebugStringA(buf);
+
+    return BuildMeshlets(positions, normals, texCoords, tangents, indices, outMesh);
+}
+
 
 void MeshletBuilder::GenerateMeshletsSimple(
     const std::vector<uint32_t>& indices,

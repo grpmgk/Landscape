@@ -11,6 +11,7 @@
 #include "Meshlet.h"
 #include "MeshletBuilder.h"
 #include "NaniteRenderer.h"
+#include "DirectStorageLoader.h"
 #include <cstdio>
 #include <io.h>
 #include <fcntl.h>
@@ -81,6 +82,7 @@ private:
     int mCurrFrameResourceIndex = 0;
 
     std::unique_ptr<NaniteRenderer> mNaniteRenderer;
+    std::unique_ptr<DirectStorageLoader> mStorageLoader;
 
     std::vector<MeshletMesh> mMeshletMeshes;
     std::vector<MeshInstance> mInstances;
@@ -140,6 +142,9 @@ bool NaniteLikeApp::Initialize()
     mCamera.SetPosition(0.0f, 100.0f, -300.0f);
     mCamera.SetLens(0.25f * MathHelper::Pi, AspectRatio(), 0.1f, 10000.0f);
 
+    mStorageLoader = std::make_unique<DirectStorageLoader>();
+    mStorageLoader->Initialize(md3dDevice.Get());
+
     mNaniteRenderer = std::make_unique<NaniteRenderer>(
         md3dDevice.Get(), mBackBufferFormat, mDepthStencilFormat);
     mNaniteRenderer->Initialize(mCommandList.Get(), mClientWidth, mClientHeight);
@@ -180,6 +185,7 @@ void NaniteLikeApp::Update(const GameTimer& gt)
     }
 
     UpdatePassCB(gt);
+    mStorageLoader->ProcessCompletedRequests();
 }
 
 void NaniteLikeApp::Draw(const GameTimer& gt)
@@ -307,11 +313,12 @@ void NaniteLikeApp::BuildMeshletMeshes()
 {
     MeshletMesh mesh;
     
-    printf("\n\033[33m[LOADING]\033[0m Loading OBJ file...\n");
-    SetWindowText(mhMainWnd, L"Loading OBJ file... Please wait");
+    printf("\n\033[33m[LOADING]\033[0m Loading OBJ file via DirectStorage...\n");
+    SetWindowText(mhMainWnd, L"Loading OBJ file via DirectStorage... Please wait");
     
-    bool loaded = MeshletBuilder::LoadOBJ(
-        L"OBJ/StGilesLychGate01/StGilesLychGate02.obj", mesh);
+    // Use DirectStorage for fast file loading
+    bool loaded = MeshletBuilder::LoadOBJWithDirectStorage(
+        L"OBJ/StGilesLychGate01/StGilesLychGate02.obj", mesh, mStorageLoader.get());
     
     if (!loaded)
     {
@@ -356,7 +363,7 @@ void NaniteLikeApp::BuildMeshletMeshes()
         printf("\033[33m[INFO]\033[0m No texture found.\n");
     }
 
-    SetWindowText(mhMainWnd, L"Nanite-Like Mesh Shader Demo");
+    SetWindowText(mhMainWnd, L"Nanite-Like Mesh Shader Demo (DirectXMesh + DirectStorage)");
     
     printf("\n\033[36m[READY]\033[0m Rendering started!\n\n");
 }

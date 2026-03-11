@@ -99,6 +99,7 @@
     <ClCompile Include="..\..\Common\GameTimer.cpp" />
     <ClCompile Include="..\..\Common\GeometryGenerator.cpp" />
     <ClCompile Include="..\..\Common\MathHelper.cpp" />
+    <ClCompile Include="DirectStorageLoader.cpp" />
     <ClCompile Include="FrameResource.cpp" />
     <ClCompile Include="MeshletBuilder.cpp" />
     <ClCompile Include="NaniteLikeApp.cpp" />
@@ -114,6 +115,7 @@
     <ClInclude Include="..\..\Common\GeometryGenerator.h" />
     <ClInclude Include="..\..\Common\MathHelper.h" />
     <ClInclude Include="..\..\Common\UploadBuffer.h" />
+    <ClInclude Include="DirectStorageLoader.h" />
     <ClInclude Include="FrameResource.h" />
     <ClInclude Include="Meshlet.h" />
     <ClInclude Include="MeshletBuilder.h" />
