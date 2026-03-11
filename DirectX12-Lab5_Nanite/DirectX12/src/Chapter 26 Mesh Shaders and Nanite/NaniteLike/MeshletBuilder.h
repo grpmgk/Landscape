@@ -31,12 +31,6 @@ public:
         const std::wstring& filename,
         MeshletMesh& outMesh);
     
-    // Load OBJ using DirectStorage for fast I/O
-    static bool LoadOBJWithDirectStorage(
-        const std::wstring& filename,
-        MeshletMesh& outMesh,
-        class DirectStorageLoader* storageLoader);
-    
     static void ComputeMeshletBounds(
         const std::vector<DirectX::XMFLOAT3>& positions,
         const std::vector<uint32_t>& uniqueVertexIndices,
